@@ -24,6 +24,7 @@ set(SOURCES
     src/main.cpp
     src/timer.cpp
     src/test_runner.cpp
+    src/engines/cpp_engine.cpp
 )
 
 # 包含目录
@@ -39,14 +40,16 @@ endif()
 
 # LuaJIT 支持
 if(ENABLE_LUAJIT)
-    # LuaJIT 需要手动编译，这里假设已编译好
-    find_library(LUAJIT_LIB luajit PATHS third_party/luajit/src)
-    if(LUAJIT_LIB)
+    # 使用手工构建的 LuaJIT 库
+    set(LUAJIT_LIBRARY_PATH "${CMAKE_SOURCE_DIR}/third_party/luajit/src/lua51.lib")
+    
+    if(EXISTS ${LUAJIT_LIBRARY_PATH})
         include_directories(third_party/luajit/src)
         list(APPEND SOURCES src/engines/luajit_engine.cpp)
         add_definitions(-DENABLE_LUAJIT)
+        message(STATUS "Found LuaJIT library at: ${LUAJIT_LIBRARY_PATH}")
     else()
-        message(WARNING "LuaJIT library not found, please build it first")
+        message(WARNING "LuaJIT library not found, please build it first using msvcbuild.bat")
     endif()
 endif()
 
@@ -90,8 +93,10 @@ if(ENABLE_LUA)
     target_link_libraries(script_benchmark lua)
 endif()
 
-if(ENABLE_LUAJIT AND LUAJIT_LIB)
-    target_link_libraries(script_benchmark ${LUAJIT_LIB})
+if(ENABLE_LUAJIT)
+    if(EXISTS ${LUAJIT_LIBRARY_PATH})
+        target_link_libraries(script_benchmark ${LUAJIT_LIBRARY_PATH})
+    endif()
 endif()
 
 if(ENABLE_ANGELSCRIPT)
@@ -100,9 +105,9 @@ if(ENABLE_ANGELSCRIPT)
 endif()
 
 if(ENABLE_V8)
-    target_link_libraries(script_benchmark v8_mock)
+    target_link_libraries(script_benchmark v8_real)
 endif()
 
 if(ENABLE_QUICKJS)
-    target_link_libraries(script_benchmark quickjs)
+    target_link_libraries(script_benchmark quickjs_lib)
 endif()

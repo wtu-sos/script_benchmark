@@ -2,6 +2,9 @@
 #include <memory>
 #include "test_runner.h"
 
+// C++ Native Engine (always available)
+#include "engines/cpp_engine.h"
+
 #ifdef ENABLE_LUA
 #include "engines/lua_engine.h"
 #endif
@@ -27,6 +30,10 @@ int main(int argc, char* argv[]) {
     std::cout << "======================================\n\n";
     
     TestRunner runner;
+    
+    // 首先添加C++原生引擎作为基准
+    std::cout << "Adding C++ Native engine (baseline)...\n";
+    runner.addEngine(std::make_unique<CppEngine>());
     
     // 添加可用的脚本引擎
 #ifdef ENABLE_LUA

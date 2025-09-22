@@ -3,21 +3,21 @@
 #include "test_runner.h"
 #include <memory>
 
-// 前向声明，避免包含复杂的 V8 头文件
+// 前向声明 V8 类型
 namespace v8 {
     class Isolate;
     class Context;
     template<class T> class Local;
     template<class T> class Global;
+    class Platform;
+    class ArrayBuffer;
 }
 
-// 前向声明真实的 V8 引擎实现类
-class RealV8Engine;
-
-class V8Engine : public ScriptEngine {
+// 内嵌 V8 引擎 - 直接使用 V8 C++ API
+class EmbeddedV8Engine : public ScriptEngine {
 public:
-    V8Engine();
-    ~V8Engine() override;
+    EmbeddedV8Engine();
+    ~EmbeddedV8Engine() override;
 
     bool initialize() override;
     void cleanup() override;
@@ -28,17 +28,19 @@ public:
     void enableJIT(bool enable) override;
 
 private:
-    // 原有的 V8 接口（为了兼容性保留）
-    v8::Isolate* isolate;
-    v8::Global<v8::Context>* context;
-    bool jit_enabled;
-    bool initialized;
-
-    // 真实的 V8 引擎实现
-    std::unique_ptr<RealV8Engine> real_v8_engine;
-    
-    // 初始化 V8 平台
+    // V8 初始化和清理
     static bool initializePlatform();
     static void shutdownPlatform();
-    static bool platform_initialized;
+    
+    // V8 脚本执行
+    bool executeJavaScript(const std::string& script);
+    
+    // 成员变量
+    static std::unique_ptr<v8::Platform> platform_;
+    static bool platform_initialized_;
+    
+    v8::Isolate* isolate_;
+    v8::Global<v8::Context>* context_;
+    bool jit_enabled_;
+    bool initialized_;
 };

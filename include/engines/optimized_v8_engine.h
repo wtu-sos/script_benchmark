@@ -14,10 +14,11 @@ namespace v8 {
 // 前向声明真实的 V8 引擎实现类
 class RealV8Engine;
 
-class V8Engine : public ScriptEngine {
+// 优化的 V8 引擎 - 减少进程启动开销
+class OptimizedV8Engine : public ScriptEngine {
 public:
-    V8Engine();
-    ~V8Engine() override;
+    OptimizedV8Engine();
+    ~OptimizedV8Engine() override;
 
     bool initialize() override;
     void cleanup() override;
@@ -28,12 +29,19 @@ public:
     void enableJIT(bool enable) override;
 
 private:
+    // 批量执行优化
+    bool executeBatchedScript(const std::string& script);
+    void warmupEngine();
+    
     // 原有的 V8 接口（为了兼容性保留）
     v8::Isolate* isolate;
     v8::Global<v8::Context>* context;
     bool jit_enabled;
     bool initialized;
-
+    
+    // 优化相关
+    bool engine_warmed_up;
+    
     // 真实的 V8 引擎实现
     std::unique_ptr<RealV8Engine> real_v8_engine;
     
