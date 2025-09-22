@@ -2,6 +2,38 @@
 #include "timer.h"
 #include <iostream>
 #include <iomanip>
+#include <vector>
+#include <algorithm>
+
+namespace {
+    const int kWarmupIters = 3;
+    const int kRunIters = 5;
+
+    static bool warmupScript(ScriptEngine* engine, const std::string& script, int times) {
+        for (int i = 0; i < times; ++i) {
+            if (!engine->executeScript(script)) return false;
+        }
+        return true;
+    }
+
+    static bool measureScript(ScriptEngine* engine, const std::string& script, int times, double& medianMs) {
+        std::vector<double> samples;
+        samples.reserve(times);
+        for (int i = 0; i < times; ++i) {
+            Timer timer;
+            timer.start();
+            bool ok = engine->executeScript(script);
+            timer.stop();
+            if (!ok) return false;
+            samples.push_back(timer.getElapsedMs());
+        }
+        std::sort(samples.begin(), samples.end());
+        if (samples.empty()) { medianMs = 0.0; return false; }
+        if (times % 2 == 1) medianMs = samples[times/2];
+        else medianMs = (samples[times/2 - 1] + samples[times/2]) / 2.0;
+        return true;
+    }
+}
 
 TestRunner::TestRunner() {
 }
@@ -132,16 +164,19 @@ for(let i = 1; i <= 1000000; i++) {
         )";
     }
     
-    Timer timer;
-    timer.start();
-    result.success = engine->executeScript(script);
-    timer.stop();
-    
-    result.elapsed_ms = timer.getElapsedMs();
-    if (!result.success) {
-        result.error_msg = "Script execution failed";
+    if (!warmupScript(engine, script, kWarmupIters)) {
+        result.success = false;
+        result.error_msg = "Script warmup failed";
+        return result;
     }
-    
+    double medianMs = 0.0;
+    if (!measureScript(engine, script, kRunIters, medianMs)) {
+        result.success = false;
+        if (result.error_msg.empty()) result.error_msg = "Script execution failed";
+        return result;
+    }
+    result.success = true;
+    result.elapsed_ms = medianMs;
     return result;
 }
 
@@ -161,23 +196,20 @@ void main() {
 }
     )";
     
-    // 预先编译：让JIT编译在计时前完成
-    std::cout << "Pre-compiling with JIT..." << std::endl;
-    engine->executeScript(script); // 第1次：触发JIT编译和优化
-    engine->executeScript(script); // 第2次：确保JIT优化生效
-    engine->executeScript(script); // 第3次：让JIT充分优化
-    
-    // 现在测量纯执行时间，不包含JIT编译开销
-    Timer timer;
-    timer.start();
-    result.success = engine->executeScript(script);
-    timer.stop();
-    
-    result.elapsed_ms = timer.getElapsedMs();
-    if (!result.success) {
-        result.error_msg = "Script execution failed";
+    // 统一预热 + 多次计时取中位数（JIT同样流程，编译时间通过引擎缓存排除）
+    if (!warmupScript(engine, script, kWarmupIters)) {
+        result.success = false;
+        result.error_msg = "Script warmup failed";
+        return result;
     }
-    
+    double medianMs = 0.0;
+    if (!measureScript(engine, script, kRunIters, medianMs)) {
+        result.success = false;
+        if (result.error_msg.empty()) result.error_msg = "Script execution failed";
+        return result;
+    }
+    result.success = true;
+    result.elapsed_ms = medianMs;
     return result;
 }
 
@@ -199,16 +231,20 @@ void main() {
 }
     )";
     
-    Timer timer;
-    timer.start();
-    result.success = engine->executeScript(script);
-    timer.stop();
-    
-    result.elapsed_ms = timer.getElapsedMs();
-    if (!result.success) {
-        result.error_msg = "Script execution failed";
+    // 统一预热 + 多次计时取中位数
+    if (!warmupScript(engine, script, kWarmupIters)) {
+        result.success = false;
+        result.error_msg = "Script warmup failed";
+        return result;
     }
-    
+    double medianMs = 0.0;
+    if (!measureScript(engine, script, kRunIters, medianMs)) {
+        result.success = false;
+        if (result.error_msg.empty()) result.error_msg = "Script execution failed";
+        return result;
+    }
+    result.success = true;
+    result.elapsed_ms = medianMs;
     return result;
 }
 
@@ -226,16 +262,20 @@ void main() {
 }
     )";
     
-    Timer timer;
-    timer.start();
-    result.success = engine->executeScript(script);
-    timer.stop();
-    
-    result.elapsed_ms = timer.getElapsedMs();
-    if (!result.success) {
-        result.error_msg = "Script execution failed";
+    // 统一预热 + 多次计时取中位数
+    if (!warmupScript(engine, script, kWarmupIters)) {
+        result.success = false;
+        result.error_msg = "Script warmup failed";
+        return result;
     }
-    
+    double medianMs = 0.0;
+    if (!measureScript(engine, script, kRunIters, medianMs)) {
+        result.success = false;
+        if (result.error_msg.empty()) result.error_msg = "Script execution failed";
+        return result;
+    }
+    result.success = true;
+    result.elapsed_ms = medianMs;
     return result;
 }
 
@@ -258,16 +298,20 @@ void main() {
 }
     )";
     
-    Timer timer;
-    timer.start();
-    result.success = engine->executeScript(script);
-    timer.stop();
-    
-    result.elapsed_ms = timer.getElapsedMs();
-    if (!result.success) {
-        result.error_msg = "Script execution failed";
+    // 统一预热 + 多次计时取中位数
+    if (!warmupScript(engine, script, kWarmupIters)) {
+        result.success = false;
+        result.error_msg = "Script warmup failed";
+        return result;
     }
-    
+    double medianMs = 0.0;
+    if (!measureScript(engine, script, kRunIters, medianMs)) {
+        result.success = false;
+        if (result.error_msg.empty()) result.error_msg = "Script execution failed";
+        return result;
+    }
+    result.success = true;
+    result.elapsed_ms = medianMs;
     return result;
 }
 
@@ -292,16 +336,20 @@ void main() {
 }
     )";
     
-    Timer timer;
-    timer.start();
-    result.success = engine->executeScript(script);
-    timer.stop();
-    
-    result.elapsed_ms = timer.getElapsedMs();
-    if (!result.success) {
-        result.error_msg = "Script execution failed";
+    // 统一预热 + 多次计时取中位数
+    if (!warmupScript(engine, script, kWarmupIters)) {
+        result.success = false;
+        result.error_msg = "Script warmup failed";
+        return result;
     }
-    
+    double medianMs = 0.0;
+    if (!measureScript(engine, script, kRunIters, medianMs)) {
+        result.success = false;
+        if (result.error_msg.empty()) result.error_msg = "Script execution failed";
+        return result;
+    }
+    result.success = true;
+    result.elapsed_ms = medianMs;
     return result;
 }
 
@@ -428,16 +476,20 @@ for(let i = 1; i <= 500000; i++) {
         )";
     }
     
-    Timer timer;
-    timer.start();
-    result.success = engine->executeScript(script);
-    timer.stop();
-    
-    result.elapsed_ms = timer.getElapsedMs();
-    if (!result.success) {
-        result.error_msg = "Script execution failed";
+    // 统一预热 + 多次计时取中位数
+    if (!warmupScript(engine, script, kWarmupIters)) {
+        result.success = false;
+        result.error_msg = "Script warmup failed";
+        return result;
     }
-    
+    double medianMs = 0.0;
+    if (!measureScript(engine, script, kRunIters, medianMs)) {
+        result.success = false;
+        if (result.error_msg.empty()) result.error_msg = "Script execution failed";
+        return result;
+    }
+    result.success = true;
+    result.elapsed_ms = medianMs;
     return result;
 }
 

@@ -52,13 +52,19 @@ endif()
 
 # AngelScript 支持
 if(ENABLE_ANGELSCRIPT)
-    add_subdirectory(third_party/angelscript)
+    # 让 Angelsea 使用自己 vendored 的 AngelScript（包含内部 API）
+    set(ASEA_ANGELSCRIPT_SYSTEM OFF CACHE BOOL "")
+    # 不设置 ASEA_ANGELSCRIPT_ROOT，让它使用默认的 vendor/angelscript/sdk
+    # MIR / fmt 默认使用 Angelsea 的 vendored 版本（需初始化其子模块）
+    add_subdirectory(third_party/angelsea)
+
     list(APPEND SOURCES 
         src/engines/angelscript_engine.cpp
-        src/engines/angelscript_jit.cpp
-        third_party/angelscript/sdk/add_on/scriptstdstring/scriptstdstring.cpp
+        third_party/angelsea/vendor/angelscript/sdk/add_on/scriptstdstring/scriptstdstring.cpp
     )
-    include_directories(third_party/angelscript/sdk/add_on)
+    # 使用 Angelsea 提供的 AngelScript 包含目录
+    include_directories(third_party/angelsea/vendor/angelscript/sdk/angelscript/include)
+    include_directories(third_party/angelsea/vendor/angelscript/sdk/add_on)
     add_definitions(-DENABLE_ANGELSCRIPT)
 endif()
 
@@ -89,7 +95,8 @@ if(ENABLE_LUAJIT AND LUAJIT_LIB)
 endif()
 
 if(ENABLE_ANGELSCRIPT)
-    target_link_libraries(script_benchmark angelscript)
+    # 使用 Angelsea 构建的 AngelScript 目标（包含内部 API）
+    target_link_libraries(script_benchmark angelscript angelsea)
 endif()
 
 if(ENABLE_V8)

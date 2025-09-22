@@ -1,11 +1,11 @@
 #pragma once
 
 #include "test_runner.h"
-#include <angelscript.h>
+#include "angelscript.h"
 #include <unordered_map>
+#include <string>
 
 // 前向声明
-class MockJITCompiler;
 
 class AngelScriptEngine : public ScriptEngine {
 public:
@@ -24,7 +24,7 @@ private:
     asIScriptEngine* engine;
     asIScriptContext* ctx;
     bool jit_enabled;
-    MockJITCompiler* jit_compiler;
+    void* jit_compiler; // 占位，实际使用 Angelsea 的静态 JIT 实例
 
     // 编译产物缓存（按脚本内容哈希）
     std::unordered_map<size_t, asIScriptModule*> module_cache;
