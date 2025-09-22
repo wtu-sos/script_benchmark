@@ -1,5 +1,5 @@
 #include "engines/angelscript_engine.h"
-#include "engines/angelscript_jit.h"
+#include <angelsea.hpp>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -49,13 +49,9 @@ void AngelScriptEngine::cleanup() {
         ctx = nullptr;
     }
     
-    // 清理 JIT 编译器
-    if (jit_compiler) {
-        if (engine) {
-            engine->SetJITCompiler(nullptr);
-        }
-        delete jit_compiler;
-        jit_compiler = nullptr;
+    // 清理 JIT 编译器（angelsea 由引擎持有的静态实例管理，此处仅解绑）
+    if (engine) {
+        engine->SetJITCompiler(nullptr);
     }
 
     // 清空编译缓存（模块由引擎统一释放，这里只清空映射）
@@ -166,41 +162,32 @@ void AngelScriptEngine::enableJIT(bool enable) {
     }
     
     if (enable && !jit_enabled) {
-        // 启用 JIT
-        std::cout << "Enabling AngelScript JIT compiler..." << std::endl;
-        
-        // 创建 JIT 编译器
-        jit_compiler = new MockJITCompiler();
-        
-        // 设置引擎属性以包含 JIT 指令
+        std::cout << "Enabling AngelScript JIT compiler (angelsea)..." << std::endl;
         engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, true);
-        
-        // 设置 JIT 编译器
-        int r = engine->SetJITCompiler(jit_compiler);
+        engine->SetEngineProperty(asEP_JIT_INTERFACE_VERSION, 2);
+        engine->SetEngineProperty(asEP_BUILD_WITHOUT_LINE_CUES, true);
+
+        // 配置 angelsea
+        angelsea::JitConfig config; // 默认启用 lazy 编译
+        // 可选：根据需要调整 config，例如禁用懒编译
+        // config.triggers.hits_before_func_compile = 0;
+
+        // 创建并绑定 JIT 到引擎
+        static angelsea::Jit s_jit(config, *engine);
+        int r = engine->SetJITCompiler(&s_jit);
         if (r < 0) {
-            std::cerr << "Failed to set JIT compiler" << std::endl;
-            delete jit_compiler;
-            jit_compiler = nullptr;
+            std::cerr << "Failed to set angelsea JIT" << std::endl;
             return;
         }
-        
+
         jit_enabled = true;
-        std::cout << "AngelScript JIT compiler enabled" << std::endl;
-        
+        std::cout << "Angelsea JIT enabled" << std::endl;
     } else if (!enable && jit_enabled) {
-        // 禁用 JIT
         std::cout << "Disabling AngelScript JIT compiler..." << std::endl;
-        
-        if (jit_compiler) {
-            engine->SetJITCompiler(nullptr);
-            delete jit_compiler;
-            jit_compiler = nullptr;
-        }
-        
+        engine->SetJITCompiler(nullptr);
         engine->SetEngineProperty(asEP_INCLUDE_JIT_INSTRUCTIONS, false);
         jit_enabled = false;
-        
-        std::cout << "AngelScript JIT compiler disabled" << std::endl;
+        std::cout << "AngelScript JIT disabled" << std::endl;
     }
 }
 
