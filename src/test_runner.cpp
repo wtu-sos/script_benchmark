@@ -148,14 +148,28 @@ void main() {
     }
 }
         )";
-    } else if (engine->getName().find("V8") != std::string::npos) {
+    } else if (engine->getName().find("V8") != std::string::npos || engine->getName().find("QuickJS") != std::string::npos) {
         script = R"(
 let sum = 0;
 for(let i = 1; i <= 1000000; i++) {
     sum = sum + i;
 }
         )";
+    } else if (engine->getName().find("JavaScript") != std::string::npos || engine->getName().find("JScript") != std::string::npos || engine->getName().find("Duktape") != std::string::npos) {
+        script = R"(
+var sum = 0;
+for(var i = 1; i <= 1000000; i++) {
+    sum = sum + i;
+}
+        )";
+    } else if (engine->getName().find("Python") != std::string::npos) {
+        script = R"(
+sum = 0
+for i in range(1, 1000001):
+    sum = sum + i
+        )";
     } else {
+        // Lua/LuaJIT
         script = R"(
         local sum = 0
         for i = 1, 1000000 do
@@ -456,7 +470,7 @@ void main() {
     }
 }
         )";
-    } else if (engine->getName().find("V8") != std::string::npos) {
+    } else if (engine->getName().find("V8") != std::string::npos || engine->getName().find("QuickJS") != std::string::npos) {
         script = R"(
 let x = 1.5;
 let y = 2.7;
@@ -465,7 +479,25 @@ for(let i = 1; i <= 500000; i++) {
     y = y / 1.1 - 0.1;
 }
         )";
+    } else if (engine->getName().find("JavaScript") != std::string::npos || engine->getName().find("JScript") != std::string::npos || engine->getName().find("Duktape") != std::string::npos) {
+        script = R"(
+var x = 1.5;
+var y = 2.7;
+for(var i = 1; i <= 500000; i++) {
+    x = x * y + i;
+    y = y / 1.1 - 0.1;
+}
+        )";
+    } else if (engine->getName().find("Python") != std::string::npos || engine->getName().find("PyPy") != std::string::npos) {
+        script = R"(
+x = 1.5
+y = 2.7
+for i in range(1, 500001):
+    x = x * y + i
+    y = y / 1.1 - 0.1
+        )";
     } else {
+        // Lua/LuaJIT
         script = R"(
         local x = 1.5
         local y = 2.7
@@ -508,14 +540,28 @@ void main() {
     }
 }
         )";
-    } else if (engine->getName().find("V8") != std::string::npos) {
+    } else if (engine->getName().find("V8") != std::string::npos || engine->getName().find("QuickJS") != std::string::npos) {
         script = R"(
 let str = "";
 for(let i = 1; i <= 10000; i++) {
     str = str + "Hello";
 }
         )";
+    } else if (engine->getName().find("JavaScript") != std::string::npos || engine->getName().find("JScript") != std::string::npos || engine->getName().find("Duktape") != std::string::npos) {
+        script = R"(
+var str = "";
+for(var i = 1; i <= 10000; i++) {
+    str = str + "Hello";
+}
+        )";
+    } else if (engine->getName().find("Python") != std::string::npos || engine->getName().find("PyPy") != std::string::npos) {
+        script = R"(
+str = ""
+for i in range(1, 10001):
+    str = str + "Hello"
+        )";
     } else {
+        // Lua/LuaJIT
         script = R"(
         local str = ""
         for i = 1, 10000 do
@@ -556,7 +602,7 @@ void main() {
     }
 }
         )";
-    } else if (engine->getName().find("V8") != std::string::npos) {
+    } else if (engine->getName().find("V8") != std::string::npos || engine->getName().find("QuickJS") != std::string::npos) {
         script = R"(
 function add(a, b) {
     return a + b;
@@ -567,7 +613,28 @@ for(let i = 1; i <= 100000; i++) {
     sum = add(sum, i);
 }
         )";
+    } else if (engine->getName().find("JavaScript") != std::string::npos || engine->getName().find("JScript") != std::string::npos) {
+        script = R"(
+function add(a, b) {
+    return a + b;
+}
+
+var sum = 0;
+for(var i = 1; i <= 100000; i++) {
+    sum = add(sum, i);
+}
+        )";
+    } else if (engine->getName().find("Python") != std::string::npos || engine->getName().find("PyPy") != std::string::npos) {
+        script = R"(
+def add(a, b):
+    return a + b
+
+sum = 0
+for i in range(1, 100001):
+    sum = add(sum, i)
+        )";
     } else {
+        // Lua/LuaJIT
         script = R"(
         function add(a, b)
             return a + b
@@ -615,7 +682,7 @@ void main() {
     }
 }
         )";
-    } else if (engine->getName().find("V8") != std::string::npos) {
+    } else if (engine->getName().find("V8") != std::string::npos || engine->getName().find("QuickJS") != std::string::npos) {
         script = R"(
 function fibonacci(n) {
     if (n <= 1) {
@@ -629,7 +696,33 @@ for(let i = 1; i <= 30; i++) {
     result = fibonacci(i);
 }
         )";
+    } else if (engine->getName().find("JavaScript") != std::string::npos || engine->getName().find("JScript") != std::string::npos || engine->getName().find("Duktape") != std::string::npos) {
+        script = R"(
+function fibonacci(n) {
+    if (n <= 1) {
+        return n;
+    }
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+var result = 0;
+for(var i = 1; i <= 30; i++) {
+    result = fibonacci(i);
+}
+        )";
+    } else if (engine->getName().find("Python") != std::string::npos || engine->getName().find("PyPy") != std::string::npos) {
+        script = R"(
+def fibonacci(n):
+    if n <= 1:
+        return n
+    return fibonacci(n - 1) + fibonacci(n - 2)
+
+result = 0
+for i in range(1, 31):
+    result = fibonacci(i)
+        )";
     } else {
+        // Lua/LuaJIT
         script = R"(
         function fibonacci(n)
             if n <= 1 then

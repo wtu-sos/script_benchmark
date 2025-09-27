@@ -1,107 +1,118 @@
 #include "engines/v8_engine.h"
-#include "../third_party/v8/v8_real.h"
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <memory>
+#include <vector>
 
-// 使用真实的 V8 引擎实现
-bool V8Engine::platform_initialized = false;
+#include <v8.h>
+#include <libplatform/libplatform.h>
 
-V8Engine::V8Engine() : isolate(nullptr), context(nullptr), jit_enabled(true), initialized(false) {
-    // 创建真实的 V8 引擎实例
-    real_v8_engine = std::make_unique<RealV8Engine>();
+namespace {
+    std::unique_ptr<v8::Platform> g_platform;
 }
 
-V8Engine::~V8Engine() {
-    cleanup();
+bool V8Engine::platform_initialized_ = false;
+
+V8Engine::V8Engine() : initialized_(false), jit_enabled_(true), isolate_(nullptr), allocator_(nullptr), context_persistent_(nullptr) {}
+V8Engine::~V8Engine() { cleanup(); }
+
+void V8Engine::ensurePlatform() {
+    if (platform_initialized_) return;
+    v8::V8::InitializeICUDefaultLocation(nullptr);
+    v8::V8::InitializeExternalStartupData(nullptr);
+    g_platform = v8::platform::NewDefaultPlatform();
+    v8::V8::InitializePlatform(g_platform.get());
+    v8::V8::Initialize();
+    platform_initialized_ = true;
 }
 
 bool V8Engine::initialize() {
-    if (!real_v8_engine) {
-        std::cerr << "Failed to create V8 engine" << std::endl;
-        return false;
-    }
-    
-    if (!real_v8_engine->initialize()) {
-        std::cerr << "Failed to initialize V8 engine" << std::endl;
+    ensurePlatform();
+
+    allocator_ = v8::ArrayBuffer::Allocator::NewDefaultAllocator();
+    v8::Isolate::CreateParams create_params;
+    create_params.array_buffer_allocator = static_cast<v8::ArrayBuffer::Allocator*>(allocator_);
+    isolate_ = v8::Isolate::New(create_params);
+    if (!isolate_) {
+        std::cerr << "V8: failed to create isolate" << std::endl;
         return false;
     }
 
-    platform_initialized = true;
-    initialized = true;
+    {
+        v8::Isolate::Scope isolate_scope(isolate_);
+        v8::HandleScope handle_scope(isolate_);
+        v8::Local<v8::ObjectTemplate> global = v8::ObjectTemplate::New(isolate_);
+        v8::Local<v8::Context> context = v8::Context::New(isolate_, nullptr, global);
+        v8::Persistent<v8::Context>* persistent = new v8::Persistent<v8::Context>(isolate_, context);
+        context_persistent_ = persistent;
+    }
+
+    initialized_ = true;
+    std::cout << "V8 JavaScript Engine initialized (embedded)" << std::endl;
     return true;
 }
 
 void V8Engine::cleanup() {
-    if (initialized) {
-        if (real_v8_engine) {
-            real_v8_engine->cleanup();
-        }
-        initialized = false;
-        isolate = nullptr;
-        if (context) {
-            delete context;
-            context = nullptr;
-        }
+    if (context_persistent_) {
+        auto* p = static_cast<v8::Persistent<v8::Context>*>(context_persistent_);
+        p->Reset();
+        delete p;
+        context_persistent_ = nullptr;
     }
+    if (isolate_) {
+        isolate_->Dispose();
+        isolate_ = nullptr;
+    }
+    if (allocator_) {
+        delete static_cast<v8::ArrayBuffer::Allocator*>(allocator_);
+        allocator_ = nullptr;
+    }
+    initialized_ = false;
 }
 
 bool V8Engine::executeScript(const std::string& script) {
-    if (!initialized || !real_v8_engine) {
+    if (!initialized_ || !isolate_ || !context_persistent_) return false;
+
+    v8::Isolate::Scope isolate_scope(isolate_);
+    v8::HandleScope handle_scope(isolate_);
+    auto* p = static_cast<v8::Persistent<v8::Context>*>(context_persistent_);
+    v8::Local<v8::Context> context = p->Get(isolate_);
+    v8::Context::Scope context_scope(context);
+
+    v8::TryCatch try_catch(isolate_);
+
+    v8::Local<v8::String> source;
+    if (!v8::String::NewFromUtf8(isolate_, script.c_str(), v8::NewStringType::kNormal).ToLocal(&source)) {
+        std::cerr << "V8: failed to create source string" << std::endl;
         return false;
     }
 
-    try {
-        return real_v8_engine->executeScript(script);
-    } catch (const std::exception& e) {
-        std::cerr << "JavaScript execution error: " << e.what() << std::endl;
-        return false;
-    }
-}
-
-bool V8Engine::executeFile(const std::string& filename) {
-    if (!initialized || !real_v8_engine) {
-        std::cerr << "V8 engine not initialized" << std::endl;
+    v8::ScriptOrigin origin(v8::String::NewFromUtf8Literal(isolate_, "<script>"));
+    v8::Local<v8::Script> compiled;
+    if (!v8::Script::Compile(context, source, &origin).ToLocal(&compiled)) {
+        v8::String::Utf8Value error(isolate_, try_catch.Exception());
+        std::cerr << "V8 compile error: " << (*error ? *error : "<unknown>") << std::endl;
         return false;
     }
 
-    return real_v8_engine->executeFile(filename);
-}
-
-std::string V8Engine::getName() const {
-    if (real_v8_engine) {
-        return real_v8_engine->getName();
-    }
-    return jit_enabled ? "V8+JIT" : "V8-JIT";
-}
-
-bool V8Engine::supportsJIT() const {
-    if (real_v8_engine) {
-        return real_v8_engine->supportsJIT();
-    }
-    return true; // V8 原生支持 JIT
-}
-
-void V8Engine::enableJIT(bool enable) {
-    jit_enabled = enable;
-    if (real_v8_engine) {
-        real_v8_engine->enableJIT(enable);
-    }
-}
-
-bool V8Engine::initializePlatform() {
-    if (platform_initialized) {
-        return true;
+    v8::Local<v8::Value> result;
+    if (!compiled->Run(context).ToLocal(&result)) {
+        v8::String::Utf8Value error(isolate_, try_catch.Exception());
+        std::cerr << "V8 runtime error: " << (*error ? *error : "<unknown>") << std::endl;
+        return false;
     }
 
-    // 通过真实的 V8 引擎初始化平台
-    platform_initialized = true;
     return true;
 }
 
-void V8Engine::shutdownPlatform() {
-    if (platform_initialized) {
-        platform_initialized = false;
-    }
+bool V8Engine::executeFile(const std::string& filename) {
+    std::ifstream f(filename);
+    if (!f.is_open()) return false;
+    std::stringstream ss; ss << f.rdbuf();
+    return executeScript(ss.str());
 }
+
+std::string V8Engine::getName() const { return jit_enabled_ ? "V8+JIT" : "V8-JIT"; }
+bool V8Engine::supportsJIT() const { return true; }
+void V8Engine::enableJIT(bool enable) { jit_enabled_ = enable; /* 可扩展：传递优化标志 */ }

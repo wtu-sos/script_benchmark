@@ -13,17 +13,18 @@
 #include "engines/luajit_engine.h"
 #endif
 
-#ifdef ENABLE_ANGELSCRIPT
-#include "engines/angelscript_engine.h"
-#endif
-
 #ifdef ENABLE_V8
 #include "engines/v8_engine.h"
 #endif
 
-#ifdef ENABLE_QUICKJS
-#include "engines/quickjs_engine.h"
+#ifdef ENABLE_ANGELSCRIPT
+#include "engines/angelscript_engine.h"
 #endif
+
+#ifdef ENABLE_PYTHON
+#include "engines/python_engine.h"
+#endif
+
 
 int main(int argc, char* argv[]) {
     std::cout << "Script Language Performance Benchmark\n";
@@ -46,20 +47,21 @@ int main(int argc, char* argv[]) {
     runner.addEngine(std::make_unique<LuaJITEngine>());
 #endif
 
-#ifdef ENABLE_ANGELSCRIPT
-    std::cout << "Adding AngelScript engine...\n";
-    runner.addEngine(std::make_unique<AngelScriptEngine>());
-#endif
-
 #ifdef ENABLE_V8
     std::cout << "Adding V8 engine...\n";
     runner.addEngine(std::make_unique<V8Engine>());
 #endif
 
-#ifdef ENABLE_QUICKJS
-    std::cout << "Adding QuickJS engine...\n";
-    runner.addEngine(std::make_unique<QuickJSEngine>());
+#ifdef ENABLE_ANGELSCRIPT
+    std::cout << "Adding AngelScript engine...\n";
+    runner.addEngine(std::make_unique<AngelScriptEngine>());
 #endif
+
+#ifdef ENABLE_PYTHON
+    std::cout << "Adding Python engine...\n";
+    runner.addEngine(std::make_unique<PythonEngine>());
+#endif
+
 
     std::cout << "\nStarting benchmark tests...\n";
     
