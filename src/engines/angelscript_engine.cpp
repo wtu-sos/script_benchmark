@@ -40,6 +40,7 @@ bool AngelScriptEngine::initialize() {
         return false;
     }
 
+    std::cout << "AngelScript Engine initialized" << std::endl;
     return true;
 }
 

@@ -18,6 +18,7 @@ bool LuaEngine::initialize() {
     // 打开标准库
     luaL_openlibs(L);
     
+    std::cout << "Lua Engine initialized" << std::endl;
     return true;
 }
 
