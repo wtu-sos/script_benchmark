@@ -1,18 +1,19 @@
 #pragma once
 
 #include "test_runner.h"
-#include <memory>
+#include <Python.h>
 #include <string>
 
-// 前向声明
-class PersistentNodeEngine;
-
-// 持久化 V8 引擎 - 通过长期运行的 Node.js 进程来避免启动开销
-class PersistentV8Engine : public ScriptEngine {
+/**
+ * Python3 脚本引擎
+ * 使用 CPython 解释器执行 Python 代码
+ */
+class PythonEngine : public ScriptEngine {
 public:
-    PersistentV8Engine();
-    ~PersistentV8Engine() override;
+    PythonEngine();
+    virtual ~PythonEngine();
 
+    // ScriptEngine 接口实现
     bool initialize() override;
     void cleanup() override;
     bool executeScript(const std::string& script) override;
@@ -22,7 +23,10 @@ public:
     void enableJIT(bool enable) override;
 
 private:
-    std::unique_ptr<PersistentNodeEngine> node_engine_;
-    bool jit_enabled_;
     bool initialized_;
+    
+    // Python 相关的辅助方法
+    void setupStandardModules();
+    bool executePythonCode(const std::string& code);
+    void handlePythonError();
 };

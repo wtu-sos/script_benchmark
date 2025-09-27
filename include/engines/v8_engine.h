@@ -1,18 +1,15 @@
 #pragma once
 
+#include <string>
 #include "test_runner.h"
-#include <memory>
 
-// 前向声明，避免包含复杂的 V8 头文件
+// 前向声明，避免头中包含 v8 头文件，减少编译耦合
 namespace v8 {
-    class Isolate;
-    class Context;
-    template<class T> class Local;
-    template<class T> class Global;
+class Isolate;
+class Platform;
+class ArrayBuffer;
+class Context;
 }
-
-// 前向声明真实的 V8 引擎实现类
-class RealV8Engine;
 
 class V8Engine : public ScriptEngine {
 public:
@@ -21,24 +18,24 @@ public:
 
     bool initialize() override;
     void cleanup() override;
+
     bool executeScript(const std::string& script) override;
     bool executeFile(const std::string& filename) override;
+
     std::string getName() const override;
     bool supportsJIT() const override;
     void enableJIT(bool enable) override;
 
 private:
-    // 原有的 V8 接口（为了兼容性保留）
-    v8::Isolate* isolate;
-    v8::Global<v8::Context>* context;
-    bool jit_enabled;
-    bool initialized;
+    bool initialized_;
+    bool jit_enabled_;
 
-    // 真实的 V8 引擎实现
-    std::unique_ptr<RealV8Engine> real_v8_engine;
-    
-    // 初始化 V8 平台
-    static bool initializePlatform();
-    static void shutdownPlatform();
-    static bool platform_initialized;
+    v8::Isolate* isolate_;
+    void* allocator_; // v8::ArrayBuffer::Allocator*
+
+    // 使用持久化上下文
+    void* context_persistent_; // 存储为 void*，实现中转换
+
+    static bool platform_initialized_;
+    static void ensurePlatform();
 };
